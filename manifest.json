@@ -1,12 +1,13 @@
 {
-  "name": "Snake Retro",
-  "short_name": "Snake-25",
-  "description": "Clásico Snake con portales temporales",
+  "name": "Juegos Retro",
+  "short_name": "Retro Games",
+  "description": "Colección de juegos clásicos: Snake y Brick Breaker",
   "start_url": "/snake.25/",
   "scope": "/snake.25/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#00ff00",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
