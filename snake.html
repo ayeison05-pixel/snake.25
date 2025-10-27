@@ -308,9 +308,8 @@
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Dibujar cuerpo (más pequeño y brillante)
       const bodySize = gridSize - 3;
-      ctx.fillStyle = '#0f0'; // Verde brillante para el cuerpo
+      ctx.fillStyle = '#0f0';
       for (let i = 1; i < snake.length; i++) {
         ctx.fillRect(
           snake[i].x * gridSize + 1.5,
@@ -320,31 +319,22 @@
         );
       }
 
-      // Dibujar cabeza (más opaca y con forma direccional)
+      // === CORRECCIÓN AQUÍ ===
       const head = snake[0];
       const headSize = gridSize - 3;
       const x = head.x * gridSize + 1.5;
       const y = head.y * gridSize + 1.5;
       
-      ctx.fillStyle = '#0a0'; // Verde más oscuro y suave para la cabeza
+      ctx.fillStyle = '#0a0';
 
-      // Determinar dirección actual
-      let dir = 'right';
-      if (snake.length > 1) {
-        const next = snake[1];
-        if (head.x > next.x) dir = 'right';
-        else if (head.x < next.x) dir = 'left';
-        else if (head.y > next.y) dir = 'down';
-        else if (head.y < next.y) dir = 'up';
-      } else {
-        // Al inicio, usar la dirección inicial (si ya se movió)
-        if (dx === 1) dir = 'right';
-        else if (dx === -1) dir = 'left';
-        else if (dy === 1) dir = 'down';
-        else if (dy === -1) dir = 'up';
-      }
+      // Usar dx/dy actuales para determinar dirección (más fiable)
+      let dir = 'right'; // valor por defecto
+      if (dx === 1) dir = 'right';
+      else if (dx === -1) dir = 'left';
+      else if (dy === 1) dir = 'down';
+      else if (dy === -1) dir = 'up';
+      // Si aún no se ha movido (dx=dy=0), usar 'right' como fallback
 
-      // Dibujar rectángulo con esquinas redondeadas en la punta
       const radius = 4;
       ctx.beginPath();
       if (dir === 'right') {
@@ -383,7 +373,6 @@
       ctx.closePath();
       ctx.fill();
 
-      // Dibujar comida (también más pequeña)
       ctx.fillStyle = '#f00';
       ctx.fillRect(
         food.x * gridSize + 1.5,
@@ -504,4 +493,4 @@
     window.addEventListener('resize', resizeCanvas);
   </script>
 </body>
-  </html>
+</html>
