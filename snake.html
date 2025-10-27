@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta name="google" content="notranslate">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Snake</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 8px;
+      overflow: hidden;
+      touch-action: none;
+      width: 100%;
+      max-width: 100vw;
+    }
+    .no-select {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    h1 {
+      font-size: 1.6em;
+      margin: 6px 0 4px;
+      text-align: center;
+      text-shadow: 0 0 6px #0f0;
+    }
+    #score, #high-score, #portal-countdown {
+      font-size: 1.1em;
+      margin: 3px 0;
+    }
+    #portal-countdown {
+      color: #0f0;
+      text-shadow: 0 0 6px #0f0;
+      min-height: 1.2em;
+    }
+    .warning-pulse {
+      animation: pulse-warning 1s infinite;
+    }
+    @keyframes pulse-warning {
+      0%, 100% { opacity: 1; text-shadow: 0 0 8px #ff0; color: #ff0; }
+      50% { opacity: 0.7; text-shadow: 0 0 4px #ff0; }
+    }
+    canvas {
+      border: 2px solid #f00;
+      background: #000;
+      display: block;
+      margin: 6px auto;
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+      max-width: 95vw;
+      max-height: 70vh;
+      width: auto;
+      height: auto;
+    }
+    #controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 6px;
+      width: min(220px, 80vw);
+      height: min(220px, 80vw);
+      margin: 10px auto;
+    }
+    .btn {
+      background: rgba(0, 60, 0, 0.6);
+      color: #0f0;
+      border: 1px solid #0a0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5em;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      padding: 4px;
+    }
+    .btn:active { background: rgba(0, 255, 0, 0.3); }
+    #up { grid-column: 2; grid-row: 1; }
+    #left { grid-column: 1; grid-row: 2; }
+    #center { grid-column: 2; grid-row: 2; background: rgba(20, 20, 20, 0.8); font-size: 1.3em; }
+    #right { grid-column: 3; grid-row: 2; }
+    #down { grid-column: 2; grid-row: 3; }
+
+    /* Botón de inicio */
+    #home-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(20, 20, 20, 0.7);
+      color: #0f0;
+      border: 1px solid #0a0;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      z-index: 5;
+      cursor: pointer;
+    }
+    #home-btn:active {
+      background: rgba(0, 255, 0, 0.2);
+    }
+
+    #game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.85);
+      color: #f00;
+      text-shadow: 0 0 10px #f00;
+      z-index: 10;
+    }
+    #game-over button {
+      margin-top: 20px;
+      padding: 8px 20px;
+      background: #111;
+      color: #0f0;
+      border: 1px solid #0a0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 1.2em;
+      cursor: pointer;
+      margin: 10px;
+    }
+    #game-over button:active {
+      background: #030;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="no-select">Snake</h1>
+  <div id="score" class="no-select">Puntos: 0</div>
+  <div id="high-score" class="no-select">Top: 0</div>
+  <div id="portal-countdown" class="no-select"></div>
+  <canvas id="game"></canvas>
+
+  <button id="home-btn" class="no-select">🏠</button>
+
+  <div id="controls">
+    <div class="btn" id="up">↑</div>
+    <div class="btn" id="left">←</div>
+    <div class="btn" id="center">⏯</div>
+    <div class="btn" id="right">→</div>
+    <div class="btn" id="down">↓</div>
+  </div>
+
+  <div id="game-over">
+    ¡JUEGO TERMINADO!
+    <button id="restart">JUGAR DE NUEVO</button>
+    <button id="back-to-home">VOLVER AL INICIO</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const highScoreDisplay = document.getElementById('high-score');
+    const portalCountdownDisplay = document.getElementById('portal-countdown');
+    const gameOverScreen = document.getElementById('game-over');
+    const restartBtn = document.getElementById('restart');
+    const backToHomeBtn = document.getElementById('back-to-home');
+    const homeBtn = document.getElementById('home-btn');
+    const centerBtn = document.getElementById('center');
+
+    const tileCount = 20;
+    let gridSize;
+    let snake, food, dx, dy, score, highScore, gameRunning, gameStarted, lastDirection;
+    let gameLoopId = null;
+    let baseSpeed = 200;
+    let currentSpeed = baseSpeed;
+    let isPaused = false;
+    let portalsActive = false;
+    let portalEndTime = 0;
+    let countdownInterval = null;
+    let warningPulseTimeout = null;
+
+    function initGame() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      if (warningPulseTimeout) clearTimeout(warningPulseTimeout);
+      if (gameLoopId) clearInterval(gameLoopId);
+
+      snake = [{ x: 10, y: 10 }];
+      food = {};
+      dx = 0; dy = 0;
+      score = 0;
+      highScore = localStorage.getItem('snakeHighScore') || 0;
+      gameRunning = false;
+      gameStarted = false;
+      lastDirection = { x: 0, y: 0 };
+      currentSpeed = baseSpeed;
+      isPaused = false;
+      portalsActive = false;
+      portalEndTime = 0;
+
+      scoreDisplay.textContent = `Puntos: ${score}`;
+      highScoreDisplay.textContent = `Top: ${highScore}`;
+      portalCountdownDisplay.textContent = '';
+      portalCountdownDisplay.className = 'no-select';
+      gameOverScreen.style.display = 'none';
+      updateWallVisuals();
+    }
+
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.65);
+      canvas.width = size;
+      canvas.height = size;
+      gridSize = size / tileCount;
+      if (gameRunning || gameStarted) draw();
+    }
+
+    function placeFood() {
+      food = {
+        x: Math.floor(Math.random() * tileCount),
+        y: Math.floor(Math.random() * tileCount)
+      };
+      for (let segment of snake) {
+        if (segment.x === food.x && segment.y === food.y) {
+          return placeFood();
+        }
+      }
+    }
+
+    function updateWallVisuals() {
+      if (portalsActive) {
+        canvas.style.borderColor = '#0f0';
+        canvas.style.boxShadow = '0 0 12px rgba(0, 255, 0, 0.5)';
+      } else {
+        canvas.style.borderColor = '#f00';
+        canvas.style.boxShadow = '0 0 12px rgba(255, 0, 0, 0.3)';
+      }
+    }
+
+    function pulseBorder(times = 2, delay = 200) {
+      if (times <= 0) return;
+      canvas.style.borderColor = '#0f0';
+      setTimeout(() => {
+        canvas.style.borderColor = portalsActive ? '#0f0' : '#f00';
+        if (times > 1) {
+          setTimeout(() => pulseBorder(times - 1, delay), delay);
+        }
+      }, delay / 2);
+    }
+
+    function startCountdown() {
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      let seconds = 25;
+      portalCountdownDisplay.textContent = seconds;
+
+      countdownInterval = setInterval(() => {
+        seconds--;
+        if (seconds >= 0) {
+          portalCountdownDisplay.textContent = seconds;
+          // Últimos 3 segundos: activar pulso
+          if (seconds <= 3) {
+            portalCountdownDisplay.classList.add('warning-pulse');
+          }
+        }
+        if (seconds < 0) {
+          clearInterval(countdownInterval);
+          portalCountdownDisplay.textContent = '';
+          portalCountdownDisplay.classList.remove('warning-pulse');
+          portalsActive = false;
+          updateWallVisuals();
+        }
+      }, 1000);
+    }
+
+    function activatePortals() {
+      portalsActive = true;
+      portalEndTime = Date.now() + 25000;
+      updateWallVisuals();
+      pulseBorder(2, 300); // Pulso suave al activar
+      startCountdown();
+    }
+
+    function startGame() {
+      initGame();
+      placeFood();
+      gameRunning = true;
+      gameStarted = false;
+      if (gameLoopId) clearInterval(gameLoopId);
+      gameLoopId = setInterval(gameLoop, currentSpeed);
+      draw();
+    }
+
+    function gameLoop() {
+      if (isPaused) return;
+      move();
+      draw();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#0f0';
+      for (let i = 1; i < snake.length; i++) {
+        ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize - 1, gridSize - 1);
+      }
+
+      ctx.fillStyle = '#0ff';
+      ctx.fillRect(snake[0].x * gridSize, snake[0].y * gridSize, gridSize - 1, gridSize - 1);
+
+      ctx.fillStyle = '#f00';
+      ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+    }
+
+    function move() {
+      if (!gameRunning || !gameStarted) return;
+
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+      if (portalsActive) {
+        if (head.x < 0) head.x = tileCount - 1;
+        if (head.x >= tileCount) head.x = 0;
+        if (head.y < 0) head.y = tileCount - 1;
+        if (head.y >= tileCount) head.y = 0;
+      } else {
+        if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+          gameOver();
+          return;
+        }
+      }
+
+      for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === head.x && snake[i].y === head.y) {
+          gameOver();
+          return;
+        }
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score += 5;
+        scoreDisplay.textContent = `Puntos: ${score}`;
+        placeFood();
+
+        if (score % 70 === 0 && currentSpeed > 60) {
+          currentSpeed -= 10;
+          clearInterval(gameLoopId);
+          gameLoopId = setInterval(gameLoop, currentSpeed);
+        }
+
+        if (score % 70 === 0) {
+          activatePortals();
+        }
+      } else {
+        snake.pop();
+      }
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      isPaused = true;
+      clearInterval(gameLoopId);
+      if (countdownInterval) clearInterval(countdownInterval);
+      if (warningPulseTimeout) clearTimeout(warningPulseTimeout);
+      portalCountdownDisplay.textContent = '';
+      portalCountdownDisplay.classList.remove('warning-pulse');
+
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('snakeHighScore', highScore);
+        highScoreDisplay.textContent = `Top: ${highScore}`;
+      }
+
+      gameOverScreen.style.display = 'flex';
+    }
+
+    ['up','down','left','right'].forEach(dir => {
+      document.getElementById(dir).addEventListener('click', () => {
+        if (!gameStarted) {
+          gameStarted = true;
+          if (dir === 'up') { dx = 0; dy = -1; }
+          if (dir === 'down') { dx = 0; dy = 1; }
+          if (dir === 'left') { dx = -1; dy = 0; }
+          if (dir === 'right') { dx = 1; dy = 0; }
+          lastDirection = { x: dx, y: dy };
+        } else {
+          if (dir === 'up' && lastDirection.y !== 1) { dx = 0; dy = -1; }
+          if (dir === 'down' && lastDirection.y !== -1) { dx = 0; dy = 1; }
+          if (dir === 'left' && lastDirection.x !== 1) { dx = -1; dy = 0; }
+          if (dir === 'right' && lastDirection.x !== -1) { dx = 1; dy = 0; }
+          lastDirection = { x: dx, y: dy };
+        }
+      });
+    });
+
+    centerBtn.addEventListener('click', () => {
+      if (!gameRunning) return;
+      if (isPaused) {
+        isPaused = false;
+        centerBtn.textContent = '⏸';
+        gameLoopId = setInterval(gameLoop, currentSpeed);
+      } else {
+        isPaused = true;
+        centerBtn.textContent = '▶';
+        clearInterval(gameLoopId);
+      }
+    });
+
+    restartBtn.addEventListener('click', startGame);
+    backToHomeBtn.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+    homeBtn.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    window.addEventListener('load', () => {
+      initGame();
+      resizeCanvas();
+      startGame();
+    });
+    window.addEventListener('resize', resizeCanvas);
+  </script>
+</body>
+  </html>
