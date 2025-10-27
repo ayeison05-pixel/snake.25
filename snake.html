@@ -94,7 +94,7 @@
       color: #f00;
       text-shadow: 0 0 10px #f00;
     }
-    #restart {
+    #game-over button {
       margin-top: 20px;
       padding: 8px 20px;
       background: #111;
@@ -103,8 +103,12 @@
       border-radius: 6px;
       font-family: 'Courier New', monospace;
       font-size: 1.2em;
+      cursor: pointer;
+      margin: 10px;
     }
-    #restart:active { background: #030; }
+    #game-over button:active {
+      background: #030;
+    }
   </style>
 </head>
 <body>
@@ -125,6 +129,7 @@
   <div id="game-over">
     ¡JUEGO TERMINADO!
     <button id="restart">JUGAR DE NUEVO</button>
+    <button id="back-to-home">VOLVER AL INICIO</button>
   </div>
 
   <script>
@@ -134,6 +139,7 @@
     const highScoreDisplay = document.getElementById('high-score');
     const gameOverScreen = document.getElementById('game-over');
     const restartBtn = document.getElementById('restart');
+    const backToHomeBtn = document.getElementById('back-to-home');
     const centerBtn = document.getElementById('center');
     const portalMessage = document.getElementById('portal-message');
 
@@ -149,6 +155,11 @@
     let warningTimeout = null;
 
     function initGame() {
+      // Limpiar cualquier temporizador previo
+      if (warningTimeout) clearTimeout(warningTimeout);
+      if (gameLoopId) clearInterval(gameLoopId);
+
+      // Reiniciar estado
       snake = [{ x: 10, y: 10 }];
       food = {};
       dx = 0; dy = 0;
@@ -161,9 +172,14 @@
       isPaused = false;
       portalsActive = false;
       portalEndTime = 0;
-      if (warningTimeout) clearTimeout(warningTimeout);
-      updateWallVisuals();
+      warningTimeout = null;
+
+      // Actualizar UI
+      scoreDisplay.textContent = `Puntuación: ${score}`;
       highScoreDisplay.textContent = `Mejor puntuación: ${highScore}`;
+      portalMessage.style.display = 'none';
+      gameOverScreen.style.display = 'none';
+      updateWallVisuals();
     }
 
     function resizeCanvas() {
@@ -198,9 +214,8 @@
 
     function activatePortals() {
       portalsActive = true;
-      portalEndTime = Date.now() + 25000; // 25 segundos desde ahora
+      portalEndTime = Date.now() + 25000;
 
-      // Mostrar mensaje de apertura
       portalMessage.textContent = '¡PORTALES ABIERTOS!';
       portalMessage.style.display = 'flex';
       setTimeout(() => {
@@ -209,13 +224,11 @@
 
       updateWallVisuals();
 
-      // Programar advertencia a los 20s (5s antes de cerrar)
       if (warningTimeout) clearTimeout(warningTimeout);
       warningTimeout = setTimeout(() => {
         if (portalsActive) {
           portalMessage.textContent = '¡PORTALES CERRÁNDOSE!';
           portalMessage.style.display = 'flex';
-          // Parpadeo sutil: cambiar borde a amarillo brevemente
           canvas.style.borderColor = '#ff0';
           setTimeout(() => {
             if (portalsActive) canvas.style.borderColor = '#0f0';
@@ -238,8 +251,6 @@
       placeFood();
       gameRunning = true;
       gameStarted = false;
-      scoreDisplay.textContent = `Puntuación: ${score}`;
-      gameOverScreen.style.display = 'none';
       if (gameLoopId) clearInterval(gameLoopId);
       gameLoopId = setInterval(gameLoop, currentSpeed);
       draw();
@@ -256,17 +267,14 @@
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Cuerpo
       ctx.fillStyle = '#0f0';
       for (let i = 1; i < snake.length; i++) {
         ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize - 1, gridSize - 1);
       }
 
-      // Cabeza
       ctx.fillStyle = '#0ff';
       ctx.fillRect(snake[0].x * gridSize, snake[0].y * gridSize, gridSize - 1, gridSize - 1);
 
-      // Comida
       ctx.fillStyle = '#f00';
       ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
     }
@@ -302,14 +310,12 @@
         scoreDisplay.textContent = `Puntuación: ${score}`;
         placeFood();
 
-        // Aumentar velocidad cada 70 puntos
         if (score % 70 === 0 && currentSpeed > 60) {
           currentSpeed -= 10;
           clearInterval(gameLoopId);
           gameLoopId = setInterval(gameLoop, currentSpeed);
         }
 
-        // Activar/reiniciar portales cada 70 puntos
         if (score % 70 === 0) {
           activatePortals();
         }
@@ -323,11 +329,14 @@
       isPaused = true;
       clearInterval(gameLoopId);
       if (warningTimeout) clearTimeout(warningTimeout);
+      portalMessage.style.display = 'none';
+
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('snakeHighScore', highScore);
         highScoreDisplay.textContent = `Mejor puntuación: ${highScore}`;
       }
+
       gameOverScreen.style.display = 'flex';
     }
 
@@ -365,6 +374,9 @@
     });
 
     restartBtn.addEventListener('click', startGame);
+    backToHomeBtn.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
 
     window.addEventListener('load', () => {
       initGame();
